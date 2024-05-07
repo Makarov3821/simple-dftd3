@@ -21,7 +21,6 @@ set(dir "${CMAKE_CURRENT_SOURCE_DIR}")
 list(
   APPEND srcs
   "${dir}/dftd3.f90"
-  "${dir}/d10t.f90"
 )
 
 set(srcs "${srcs}" PARENT_SCOPE)
