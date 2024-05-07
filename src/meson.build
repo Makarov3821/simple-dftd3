@@ -18,4 +18,5 @@ subdir('dftd3')
 
 srcs += files(
   'dftd3.f90',
+  'd10t.f90',
 )
