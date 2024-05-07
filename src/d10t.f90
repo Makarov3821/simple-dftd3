@@ -1,0 +1,93 @@
+! This file is part of s-dftd3.
+! SPDX-Identifier: LGPL-3.0-or-later
+!
+! s-dftd3 is free software: you can redistribute it and/or modify it under
+! the terms of the GNU Lesser General Public License as published by
+! the Free Software Foundation, either version 3 of the License, or
+! (at your option) any later version.
+!
+! s-dftd3 is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+! GNU Lesser General Public License for more details.
+!
+! You should have received a copy of the GNU Lesser General Public License
+! along with s-dftd3.  If not, see <https://www.gnu.org/licenses/>.    
+
+subroutine calc_dftd3_atm_rest(num, num_size, xyz, charge, uhf, method_c, method_len, energy, final_gradient, final_sigma, corr_c, corr_len)
+   use mctc_env
+   use mctc_io
+   use dftd3
+   implicit none
+
+   integer, intent(in) :: num_size
+   integer, intent(in) :: num(num_size)
+   real(wp), intent(in) :: xyz(3 * num_size)
+   real(wp), intent(in) :: charge
+   integer, intent(in) :: uhf
+   character(len=100) :: method_c, corr_c
+   integer, intent(in) :: method_len, corr_len
+   character(len=100) :: method, corr
+
+
+   type(error_type), allocatable :: error
+   type(d3_model) :: disp
+   type(d3_param) :: inp
+   class(rational_damping_param), allocatable :: rational_param
+   class(zero_damping_param), allocatable :: zero_param
+   type(structure_type) :: mol
+   real(wp), allocatable :: gradient(:,:)
+   real(wp), allocatable :: sigma(:,:)
+
+   real(wp), allocatable :: xyz_m(:, :)
+
+   real(wp), intent(out) :: energy
+   real(wp), intent(out) :: final_gradient(3, num_size)
+   real(wp), intent(out) :: final_sigma(3, num_size)
+
+   !strip the method and corr
+   method = method_c(1:method_len)
+   corr = corr_c(1:corr_len)
+
+   !turn the float array into wp array
+   xyz_m = reshape(xyz, [3, num_size])
+
+   call new(mol, num, xyz_m, charge, uhf)
+
+   call new_d3_model(disp, mol)
+
+   allocate(gradient(3, num_size), sigma(3, num_size))
+
+   !change model by input
+   select case (trim(corr))
+   case ('d3bj')
+      !print *, "d3bj will be used"
+      call get_rational_damping(inp, method, error, s9=1.0_wp)
+      !print *, "get rational damping ok"
+      if (allocated(error)) return
+      allocate(rational_param)
+      call new_rational_damping(rational_param, inp)
+      !print *, "new rational damping ok"
+      call get_dispersion(mol, disp, rational_param, realspace_cutoff(), energy, gradient, sigma)
+      !print *, "get dispersion ok"
+   case ('d3')
+      call get_zero_damping(inp, method, error, s9=1.0_wp)
+      if (allocated(error)) return
+      call new_zero_damping(zero_param, inp)
+      call get_dispersion(mol, disp, zero_param, realspace_cutoff(), energy, gradient, sigma)
+   end select
+
+   if (allocated(gradient)) then
+      final_gradient = gradient
+   endif
+
+   if (allocated(sigma)) then
+      final_sigma = sigma
+   endif
+
+
+
+end subroutine calc_dftd3_atm_rest
+
+
+
