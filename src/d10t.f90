@@ -61,18 +61,15 @@ subroutine calc_dftd3_atm_rest(num, num_size, xyz, charge, uhf, method_c, method
    !change model by input
    select case (trim(corr))
    case ('d3bj')
-      !print *, "d3bj will be used"
       call get_rational_damping(inp, method, error, s9=1.0_wp)
-      !print *, "get rational damping ok"
       if (allocated(error)) return
       allocate(rational_param)
       call new_rational_damping(rational_param, inp)
-      !print *, "new rational damping ok"
       call get_dispersion(mol, disp, rational_param, realspace_cutoff(), energy, gradient, sigma)
-      !print *, "get dispersion ok"
    case ('d3')
       call get_zero_damping(inp, method, error, s9=1.0_wp)
       if (allocated(error)) return
+      allocate(zero_param)
       call new_zero_damping(zero_param, inp)
       call get_dispersion(mol, disp, zero_param, realspace_cutoff(), energy, gradient, sigma)
    end select
